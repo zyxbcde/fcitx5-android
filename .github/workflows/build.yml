@@ -80,8 +80,8 @@ jobs:
         with:
           name: apk-${{ matrix.abi }}-${{ matrix.build_type }}
           path: |
-            app/build/outputs/apk/**/*.apk
-            app/build/outputs/bundle/**/*.aab
+            app/build/intermediates/apk/release/*.apk
+            app/build/intermediates/apk/release/*.aab
           retention-days: 30
 
       - name: Upload entire project as backup
