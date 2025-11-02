@@ -43,11 +43,35 @@ android {
             resValue("mipmap", "app_icon", "@mipmap/ic_launcher")
             resValue("mipmap", "app_icon_round", "@mipmap/ic_launcher_round")
             resValue("string", "app_name", "@string/app_name_release")
+
+            if (project.hasProperty("android.injected.signing.store.file")) {
+                signingConfigs {
+                    create("release") {
+                        storeFile = file(project.property("android.injected.signing.store.file") as String)
+                        storePassword = project.property("android.injected.signing.store.password") as String
+                        keyAlias = project.property("android.injected.signing.key.alias") as String
+                        keyPassword = project.property("android.injected.signing.key.password") as String
+                    }
+                }
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             resValue("mipmap", "app_icon", "@mipmap/ic_launcher_debug")
             resValue("mipmap", "app_icon_round", "@mipmap/ic_launcher_round_debug")
             resValue("string", "app_name", "@string/app_name_debug")
+
+            if (project.hasProperty("android.injected.signing.store.file")) {
+                signingConfigs {
+                    create("debug") {
+                        storeFile = file(project.property("android.injected.signing.store.file") as String)
+                        storePassword = project.property("android.injected.signing.store.password") as String
+                        keyAlias = project.property("android.injected.signing.key.alias") as String
+                        keyPassword = project.property("android.injected.signing.key.password") as String
+                    }
+                }
+                signingConfig = signingConfigs.getByName("debug")
+            }
         }
     }
 
