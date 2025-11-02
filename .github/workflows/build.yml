@@ -58,7 +58,7 @@ jobs:
           cd app 
           ls
           cd ..
-          cd bulid
+          cd build
           ls
           cd outputs
           ls
