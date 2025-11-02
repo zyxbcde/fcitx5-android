@@ -55,11 +55,14 @@ jobs:
             --stacktrace
           echo "see"
           ls
+          echo "see app"
           cd app 
           ls
           cd ..
+          echo "see build"
           cd build
           ls
+          echo "see outputs"
           cd outputs
           ls
       - name: Upload APK Artifacts
