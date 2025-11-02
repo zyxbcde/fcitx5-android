@@ -55,16 +55,18 @@ jobs:
             --stacktrace
           echo "see"
           ls
-          echo "see 2"
+          cd app 
+          ls
+          cd ..
           cd bulid
           ls
-          cd output
+          cd outputs
           ls
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: apk-${{ matrix.abi }}-${{ matrix.build_type }}
           path: |
-            app/build/outputs/apk/${{ matrix.build_type }}/app-${{ matrix.build_type }}-${{ matrix.abi }}.apk
-            app/build/outputs/bundle/${{ matrix.build_type }}/app-${{ matrix.build_type }}-${{ matrix.abi }}.aab
+            build/outputs/apk/${{ matrix.build_type }}/app-${{ matrix.build_type }}-${{ matrix.abi }}.apk
+            build/outputs/bundle/${{ matrix.build_type }}/app-${{ matrix.build_type }}-${{ matrix.abi }}.aab
           retention-days: 30
