@@ -3,13 +3,23 @@ name: Build APK
 on:
   push:
     branches: [master, main]
+    paths:
+      - 'app/**'
+      - 'lib/**'
+      - 'build-logic/**'
+      - '.github/workflows/build-apk.yml'
   pull_request:
     branches: [master, main]
   workflow_dispatch:
 
 jobs:
-  build:
+  build-apk:
     runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        abi: [arm64-v8a]
+        build_type: [Release]
+      fail-fast: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -26,34 +36,30 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install dependencies
+      - name: Install system dependencies
         run: |
           sudo apt update
           sudo apt install -y extra-cmake-modules gettext
 
-      - name: Build APKs
-        run: |
-          ./gradlew :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
 
-      - name: Find and list APK files
+      - name: Build APK
         run: |
-          echo "=== 搜索所有 APK 文件 ==="
-          find . -name "*.apk" -type f | grep -v ".gradle" | sort
+          echo "Building ${{ matrix.build_type }} APK for ABI: ${{ matrix.abi }}"
           
-          echo "=== app 模块构建输出 ==="
-          ls -la app/build/outputs/ || echo "app/build/outputs 不存在"
-          
-          echo "=== 如果有的话，查看 apk 目录 ==="
-          ls -la app/build/outputs/apk/ 2>/dev/null || echo "apk 目录不存在"
-          
-          echo "=== 查看完整的 app/build 目录 ==="
-          ls -la app/build/ || echo "app/build 目录不存在"
-
-      - name: Upload any found APKs
+          # 构建特定 ABI 的 APK
+          ./gradlew :app:assemble${{ matrix.build_type }} \
+            -Pandroid.injected.build.abi=${{ matrix.abi }} \
+            --no-daemon \
+            --stacktrace
+          echo "see"
+          ls
+      - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: found-apk-files
+          name: apk-${{ matrix.abi }}-${{ matrix.build_type }}
           path: |
-            **/*.apk
-            **/*.aab
+            app/build/outputs/apk/${{ matrix.build_type }}/app-${{ matrix.build_type }}-${{ matrix.abi }}.apk
+            app/build/outputs/bundle/${{ matrix.build_type }}/app-${{ matrix.build_type }}-${{ matrix.abi }}.aab
           retention-days: 30
