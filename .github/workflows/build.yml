@@ -1,7 +1,14 @@
-name: Build and Sign APK
+name: Build APK
 
 on:
   push:
+    branches: [master, main]
+    paths:
+      - 'app/**'
+      - 'lib/**'
+      - 'build-logic/**'
+      - '.github/workflows/build-apk.yml'
+  pull_request:
     branches: [master, main]
   workflow_dispatch:
 
@@ -13,10 +20,12 @@ jobs:
         abi: [arm64-v8a]
         build_type: [Release]
       fail-fast: false
-    
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          submodules: recursive
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -27,30 +36,49 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Generate debug keystore
+      - name: Install system dependencies
         run: |
-          keytool -genkey -v -keystore debug.keystore -alias androiddebugkey \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass android -keypass android \
-            -dname "CN=Android Debug,O=Android,C=US"
+          sudo apt update
+          sudo apt install -y extra-cmake-modules gettext
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
 
-      - name: Build signed APK
+      
+
+      - name: Build and Sign APK
         run: |
+          echo "Building and signing ${{ matrix.build_type }} APK for ABI: ${{ matrix.abi }}"
+          
+          # 生成调试密钥（如果不存在）
+          keytool -genkey -v -keystore debug.keystore -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US"
+          
+          # 构建并签名
           ./gradlew :app:assemble${{ matrix.build_type }} \
+            -Pandroid.injected.signing.store.file=$(pwd)/debug.keystore \
+            -Pandroid.injected.signing.store.password=android \
+            -Pandroid.injected.signing.key.alias=androiddebugkey \
+            -Pandroid.injected.signing.key.password=android \
             -Pandroid.injected.build.abi=${{ matrix.abi }} \
             --no-daemon \
             --stacktrace
-
-      - name: Find APK files
+            
+      - name: Find and list build outputs
         run: |
-          echo "=== 查找已签名的 APK 文件 ==="
-          find . -name "*.apk" -exec echo "找到: {}" \;
-          find ./app/build -name "*.apk" | head -10
-
-      - name: Upload signed APK
+          echo "=== 查找所有 APK/AAB 文件 ==="
+          find . -name "*.apk" -o -name "*.aab" | head -20
+          
+          echo "=== 查看 build 目录结构 ==="
+          find ./app/build -type f -name "*.apk" -o -name "*.aab" | head -20
+          
+          echo "=== 查看 outputs 目录 ==="
+          find . -path "*/outputs/*" -type d 2>/dev/null | head -10
+      - name: Upload specific APK artifacts
         uses: actions/upload-artifact@v4
+        if: always()  # 即使构建失败也上传，方便调试
         with:
-          name: signed-apk-${{ matrix.abi }}-${{ matrix.build_type }}
+          name: apk-${{ matrix.abi }}-${{ matrix.build_type }}
           path: |
             app/build/outputs/apk/**/*.apk
             app/build/outputs/bundle/**/*.aab
