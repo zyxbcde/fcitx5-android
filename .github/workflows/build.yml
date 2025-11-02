@@ -55,6 +55,11 @@ jobs:
             --stacktrace
           echo "see"
           ls
+          echo "see 2"
+          cd bulid
+          ls
+          cd output
+          ls
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
