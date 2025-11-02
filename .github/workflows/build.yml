@@ -53,23 +53,32 @@ jobs:
             -Pandroid.injected.build.abi=${{ matrix.abi }} \
             --no-daemon \
             --stacktrace
-          echo "see"
-          ls
-          echo "see app"
-          cd app 
-          ls
-          cd ..
-          echo "see build"
-          cd build
-          ls
-          echo "see outputs"
-          cd outputs
-          ls
-      - name: Upload APK Artifacts
+
+      - name: Find and list build outputs
+        run: |
+          echo "=== 查找所有 APK/AAB 文件 ==="
+          find . -name "*.apk" -o -name "*.aab" | head -20
+          
+          echo "=== 查看 build 目录结构 ==="
+          find ./app/build -type f -name "*.apk" -o -name "*.aab" | head -20
+          
+          echo "=== 查看 outputs 目录 ==="
+          find . -path "*/outputs/*" -type d 2>/dev/null | head -10
+
+      - name: Upload specific APK artifacts
         uses: actions/upload-artifact@v4
+        if: always()  # 即使构建失败也上传，方便调试
         with:
           name: apk-${{ matrix.abi }}-${{ matrix.build_type }}
           path: |
-            build/outputs/apk/${{ matrix.build_type }}/app-${{ matrix.build_type }}-${{ matrix.abi }}.apk
-            build/outputs/bundle/${{ matrix.build_type }}/app-${{ matrix.build_type }}-${{ matrix.abi }}.aab
+            app/build/outputs/apk/**/*.apk
+            app/build/outputs/bundle/**/*.aab
+          retention-days: 30
+
+      - name: Upload entire project as backup
+        uses: actions/upload-artifact@v4
+        if: always()  # 总是上传，确保有完整文件
+        with:
+          name: full-project-backup-${{ matrix.abi }}-${{ matrix.build_type }}
+          path: .
           retention-days: 30
