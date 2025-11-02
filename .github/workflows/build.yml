@@ -59,13 +59,12 @@ jobs:
         with:
           name: apk-${{ matrix.abi }}-${{ matrix.build_type }}
           path: |
-            app/build/outputs/apk/${{ matrix.build_type | lower }}/app-${{ matrix.build_type | lower }}-${{ matrix.abi }}.apk
-            app/build/outputs/bundle/${{ matrix.build_type | lower }}/app-${{ matrix.build_type | lower }}-${{ matrix.abi }}.aab
+            app/build/outputs/apk/${{ matrix.build_type }}/app-${{ matrix.build_type }}-${{ matrix.abi }}.apk
+            app/build/outputs/bundle/${{ matrix.build_type }}/app-${{ matrix.build_type }}-${{ matrix.abi }}.aab
           retention-days: 30
 
   build-universal:
     runs-on: ubuntu-24.04
-    needs: build-apk
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
