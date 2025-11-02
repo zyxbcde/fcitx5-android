@@ -1,0 +1,126 @@
+name: Build APK
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'app/**'
+      - 'lib/**'
+      - 'build-logic/**'
+      - '.github/workflows/build-apk.yml'
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a, x86_64, x86]
+        build_type: [Debug, Release]
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y extra-cmake-modules gettext
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Build APK
+        run: |
+          echo "Building ${{ matrix.build_type }} APK for ABI: ${{ matrix.abi }}"
+          
+          # 构建特定 ABI 的 APK
+          ./gradlew :app:assemble${{ matrix.build_type }} \
+            -Pandroid.injected.build.abi=${{ matrix.abi }} \
+            --no-daemon \
+            --stacktrace
+
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ matrix.abi }}-${{ matrix.build_type }}
+          path: |
+            app/build/outputs/apk/${{ matrix.build_type | lower }}/app-${{ matrix.build_type | lower }}-${{ matrix.abi }}.apk
+            app/build/outputs/bundle/${{ matrix.build_type | lower }}/app-${{ matrix.build_type | lower }}-${{ matrix.abi }}.aab
+          retention-days: 30
+
+  build-universal:
+    runs-on: ubuntu-24.04
+    needs: build-apk
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y extra-cmake-modules gettext
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v5
+
+      - name: Build Universal APK
+        run: |
+          # 构建包含所有 ABI 的通用 APK
+          ./gradlew :app:assembleDebug :app:assembleRelease \
+            --no-daemon \
+            --stacktrace
+
+      - name: Upload Universal APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: universal-apks
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/bundle/debug/app-debug.aab
+            app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      - name: Generate Build Info
+        run: |
+          echo "Build completed at: $(date)" >> build-info.txt
+          echo "Commit: ${{ github.sha }}" >> build-info.txt
+          echo "Branch: ${{ github.ref }}" >> build-info.txt
+          echo "Workflow: ${{ github.workflow }}" >> build-info.txt
+          
+          # 获取版本信息
+          ./gradlew :app:printVersion >> build-info.txt
+
+      - name: Upload Build Info
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-info
+          path: build-info.txt
+          retention-days: 30
